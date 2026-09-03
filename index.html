@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Poll</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple-deep: #2A0845;
+    --purple-mid: #4B1476;
+    --purple-line: #5E2A8C;
+    --gold: #F2B705;
+    --gold-soft: #FBE29A;
+    --white: #FFFFFF;
+    --muted: #C9B3E3;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background: var(--purple-deep);
+    background-image:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 2px, transparent 2px, transparent 40px);
+    color: var(--white);
+    font-family: 'Work Sans', sans-serif;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  .stage {
+    width: 100%;
+    max-width: 640px;
+    text-align: center;
+  }
+
+  /* progress tracker */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+
+  .progress-seg {
+    height: 5px;
+    flex: 1;
+    max-width: 46px;
+    background: var(--purple-line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-seg .fillbar {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    transition: width 0.4s ease;
+  }
+
+  .progress-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 22px;
+    letter-spacing: 0.02em;
+  }
+
+  .kicker {
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--gold);
+    margin: 0 0 6px;
+  }
+
+  h1 {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: clamp(34px, 7.5vw, 58px);
+    line-height: 1.02;
+    letter-spacing: 0.01em;
+    color: var(--white);
+    margin: 0 0 32px;
+    text-shadow: 0 3px 0 var(--purple-mid);
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 28px;
+    background: var(--purple-mid);
+    border: 2px solid var(--purple-line);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 19px;
+    text-align: left;
+    cursor: pointer;
+    clip-path: polygon(0 0, 96% 0, 100% 50%, 96% 100%, 0 100%);
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    overflow: hidden;
+  }
+
+  .option:hover:not(:disabled) {
+    background: #5B1990;
+    border-color: var(--gold);
+  }
+
+  .option:active:not(:disabled) { transform: scale(0.99); }
+  .option:disabled { cursor: default; }
+
+  .option .label { position: relative; z-index: 2; }
+
+  .option .pct {
+    position: relative;
+    z-index: 2;
+    font-family: 'Anton', sans-serif;
+    font-size: 24px;
+    color: var(--gold);
+    min-width: 58px;
+    text-align: right;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.5s;
+  }
+
+  .option.revealed .pct { opacity: 1; }
+
+  .fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 0%;
+    background: var(--gold);
+    opacity: 0.28;
+    transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 1;
+  }
+
+  .status {
+    margin-top: 18px;
+    min-height: 20px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .total { font-weight: 600; color: var(--gold-soft); }
+
+  .next-btn {
+    margin-top: 26px;
+    background: var(--gold);
+    color: var(--purple-deep);
+    border: none;
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 14px 34px;
+    cursor: pointer;
+    clip-path: polygon(4% 0, 100% 0, 96% 100%, 0% 100%);
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity 0.3s ease 0.4s, transform 0.3s ease 0.4s, background 0.15s ease;
+  }
+
+  .next-btn.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .next-btn:hover { background: var(--gold-soft); }
+
+  footer {
+    margin-top: 46px;
+    font-size: 12px;
+    color: #7B5AA6;
+  }
+
+  /* summary screen */
+  .summary-item {
+    text-align: left;
+    margin-bottom: 34px;
+  }
+
+  .summary-item h2 {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 24px;
+    margin: 0 0 12px;
+    color: var(--white);
+  }
+
+  .summary-bar {
+    position: relative;
+    background: var(--purple-mid);
+    border: 2px solid var(--purple-line);
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    clip-path: polygon(0 0, 97% 0, 100% 50%, 97% 100%, 0 100%);
+    overflow: hidden;
+  }
+
+  .summary-bar .fill { opacity: 0.32; }
+
+  .summary-bar .row {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .summary-bar .row .pct {
+    font-family: 'Anton', sans-serif;
+    color: var(--gold);
+    font-size: 17px;
+  }
+
+  .replay-btn {
+    display: inline-block;
+    margin-top: 10px;
+    background: none;
+    border: 2px solid var(--purple-line);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 22px;
+    cursor: pointer;
+  }
+
+  .replay-btn:hover { border-color: var(--gold); color: var(--gold-soft); }
+
+  @media (max-width: 480px) {
+    .option { padding: 16px 20px; font-size: 17px; }
+    .option .pct { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="kicker">CLASS POLL</div>
+</div>
+
+<script>
+/* ======================================================
+   1) EDIT THIS SECTION — your list of questions.
+   Add as many as you want (5–10 works great).
+   ====================================================== */
+  const POLL_SET = [
+    { question: "Fair Life Protein Shakes?", options: ["Yay!", "Nah Bro"] },
+    { question: "Meat Sticks?", options: ["Obviously", "No Thanks", "I'm Vegan (Deliver me)"] },
+    { question: "Chobani Yogurt Desserts", options: ["Yes", "Ew"] },
+    { question: "Protein Powder Scoops?", options: ["I'm Jacked (yes)", "Tiny and Proud"] },
+    { question: "Energy Drinks?", options: ["Redbulls", "Alanis", "White Monster", "Ghost", "Celsius (I Need Deliverance)"] },
+    { question: "Uncrustables?", options: ["Yes Please", "Uncrust-huh?"] },
+    { question: "Soda?", options: ["Coke", "Pepsi", "Mountain Dew", "Sprite", "Coke Zero", "Anything Sugar Free", "No"] },
+    { question: "Fruit Snacks", options: ["I Only Eat Fruit Snacks", "No Thank You (I'm Already Fruity)"] },
+    { question: "Do You Eat Breakfast Bars?", options: ["Yuppers", "Nope"] }
+  ];
+
+/* ======================================================
+   2) PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+   ====================================================== */
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwrEjOVmOEr1l4JyMvgBBYHhmUPWuni3GmQDbCgDVII5bbJ_dMTzOJ0jcvsyXMmKJmD/exec";
+
+/* ====================================================== */
+
+  const stage = document.getElementById('stage');
+  let current = 0;
+
+  function votedKey(q) {
+    return 'poll-voted-' + btoa(q).slice(0, 24);
+  }
+
+  function buildProgress() {
+    const wrap = document.createElement('div');
+    wrap.className = 'progress-row';
+    POLL_SET.forEach((_, i) => {
+      const seg = document.createElement('div');
+      seg.className = 'progress-seg';
+      const fillbar = document.createElement('div');
+      fillbar.className = 'fillbar';
+      if (i < current) fillbar.style.width = '100%';
+      seg.appendChild(fillbar);
+      wrap.appendChild(seg);
+    });
+    return wrap;
+  }
+
+  async function fetchCounts(question, options) {
+    if (SCRIPT_URL.includes('PASTE_YOUR')) return options.map(() => 0);
+    try {
+      const res = await fetch(`${SCRIPT_URL}?question=${encodeURIComponent(question)}`);
+      const data = await res.json();
+      const returnedOptions = data.options || [];
+      const returnedCounts = data.counts || [];
+      return options.map(opt => {
+        const idx = returnedOptions.indexOf(opt);
+        return idx === -1 ? 0 : returnedCounts[idx];
+      });
+    } catch (err) {
+      return options.map(() => 0);
+    }
+  }
+
+  async function submitVote(question, option) {
+    if (SCRIPT_URL.includes('PASTE_YOUR')) return;
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ question, option })
+      });
+    } catch (err) { /* still show results even if the write is slow/offline */ }
+  }
+
+  function renderQuestion(index) {
+    const item = POLL_SET[index];
+    const alreadyVoted = !!localStorage.getItem(votedKey(item.question));
+
+    stage.innerHTML = '';
+    stage.appendChild(buildProgress());
+
+    const label = document.createElement('p');
+    label.className = 'progress-label';
+    label.textContent = `Question ${index + 1} of ${POLL_SET.length}`;
+    stage.appendChild(label);
+
+    const h1 = document.createElement('h1');
+    h1.textContent = item.question;
+    stage.appendChild(h1);
+
+    const optionsWrap = document.createElement('div');
+    optionsWrap.className = 'options';
+    item.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option';
+      btn.innerHTML = `<div class="fill"></div><span class="label">${opt}</span><span class="pct">0%</span>`;
+      btn.addEventListener('click', () => handleVote(index, i));
+      optionsWrap.appendChild(btn);
+    });
+    stage.appendChild(optionsWrap);
+
+    const status = document.createElement('p');
+    status.className = 'status';
+    status.id = 'status';
+    stage.appendChild(status);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'next-btn';
+    nextBtn.id = 'next-btn';
+    nextBtn.textContent = (index === POLL_SET.length - 1) ? 'See Final Results' : 'Next Question';
+    nextBtn.addEventListener('click', () => {
+      current++;
+      if (current >= POLL_SET.length) {
+        renderSummary();
+      } else {
+        renderQuestion(current);
+      }
+    });
+    stage.appendChild(nextBtn);
+
+    const foot = document.createElement('footer');
+    foot.textContent = 'made with 💜🖤 for the class';
+    stage.appendChild(foot);
+
+    if (alreadyVoted) {
+      revealResults(item, optionsWrap, status, nextBtn, true);
+    }
+  }
+
+  async function revealResults(item, optionsWrap, status, nextBtn, skipDisable) {
+    if (!skipDisable) {
+      optionsWrap.querySelectorAll('.option').forEach(b => b.disabled = true);
+    }
+    const counts = await fetchCounts(item.question, item.options);
+    const total = counts.reduce((a, b) => a + b, 0);
+    optionsWrap.querySelectorAll('.option').forEach((btn, i) => {
+      const pct = total > 0 ? Math.round((counts[i] / total) * 100) : 0;
+      btn.querySelector('.fill').style.width = pct + '%';
+      btn.querySelector('.pct').textContent = pct + '%';
+      btn.classList.add('revealed');
+    });
+    status.innerHTML = total > 0
+      ? `<span class="total">${total}</span> vote${total === 1 ? '' : 's'} so far`
+      : 'be the first to vote';
+    nextBtn.classList.add('show');
+  }
+
+  async function handleVote(qIndex, optIndex) {
+    const item = POLL_SET[qIndex];
+    if (localStorage.getItem(votedKey(item.question))) return;
+    localStorage.setItem(votedKey(item.question), String(optIndex));
+
+    const optionsWrap = document.querySelector('.options');
+    const status = document.getElementById('status');
+    const nextBtn = document.getElementById('next-btn');
+
+    status.textContent = 'submitting…';
+    await submitVote(item.question, item.options[optIndex]);
+    revealResults(item, optionsWrap, status, nextBtn);
+  }
+
+  async function renderSummary() {
+    stage.innerHTML = '';
+    const label = document.createElement('p');
+    label.className = 'kicker';
+    label.textContent = 'FINAL RESULTS';
+    stage.appendChild(label);
+
+    const h1 = document.createElement('h1');
+    h1.style.fontSize = 'clamp(30px, 6vw, 46px)';
+    h1.textContent = "Here's how the class voted";
+    stage.appendChild(h1);
+
+    for (const item of POLL_SET) {
+      const wrap = document.createElement('div');
+      wrap.className = 'summary-item';
+      const h2 = document.createElement('h2');
+      h2.textContent = item.question;
+      wrap.appendChild(h2);
+
+      const counts = await fetchCounts(item.question, item.options);
+      const total = counts.reduce((a, b) => a + b, 0);
+
+      item.options.forEach((opt, i) => {
+        const pct = total > 0 ? Math.round((counts[i] / total) * 100) : 0;
+        const bar = document.createElement('div');
+        bar.className = 'summary-bar';
+        bar.innerHTML = `
+          <div class="fill" style="width:${pct}%"></div>
+          <div class="row"><span>${opt}</span><span class="pct">${pct}%</span></div>
+        `;
+        wrap.appendChild(bar);
+      });
+      stage.appendChild(wrap);
+    }
+
+    const replay = document.createElement('button');
+    replay.className = 'replay-btn';
+    replay.textContent = 'results update live — refresh anytime';
+    replay.addEventListener('click', renderSummary);
+    stage.appendChild(replay);
+
+    const foot = document.createElement('footer');
+    foot.textContent = 'made with 💜🖤 for the class';
+    stage.appendChild(foot);
+  }
+
+  // start: jump to the first question the visitor hasn't answered yet,
+  // or straight to the summary if they've done them all
+  function findStart() {
+    for (let i = 0; i < POLL_SET.length; i++) {
+      if (!localStorage.getItem(votedKey(POLL_SET[i].question))) return i;
+    }
+    return POLL_SET.length;
+  }
+
+  current = findStart();
+  if (current >= POLL_SET.length) {
+    renderSummary();
+  } else {
+    renderQuestion(current);
+  }
+</script>
+
+</body>
+</html>
